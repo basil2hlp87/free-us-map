@@ -1,0 +1,75 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FreeUSmap.Live</title>
+    <meta charset="utf-8" />
+
+    <link rel="apple-touch-icon" sizes="57x57" href="/images/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/images/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/images/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/images/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/images/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/images/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/images/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/images/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192"  href="/images/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/images/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <link rel="manifest" href="/images/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/images/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script>
+    <style>
+        html, body {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        .leaflet-div-icon {
+            background: none;
+            border: none;
+        }
+        #intro-msg {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            margin: 0 10%;
+            position: absolute;
+                bottom: 10%;
+            width: 80%;
+            z-index: 10000;
+        }
+        #close-intro-msg {
+            margin: -0.5rem -0.5rem 0 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div id="intro-msg" class="alert alert-info">
+        <button id="close-intro-msg" type="button" class="close"><span>&times;</span></button>
+        Events of interest over the past 12 hours.
+        <br />Click on the map to add an event. Click on an icon to see details of an event that somebody else added.
+        <br />If you're in <a href="https://scanmap.frnsys.com/ATX" target="_blank">Austin</a>, <a href="https://scanmap.frnsys.com/BAYAREA" target="_blank">the Bay Area</a>, <a href="https://scanmap.frnsys.com/chi" target="_blank">Chicago</a>, <a href="https://scanmap.frnsys.com/LA" target="_blank">Los Angeles</a>, or <a href="https://scanmap.frnsys.com/NY" target="_blank">New York City</a> check out <a href="https://scanmap.frnsys.com/" target="_blank">ScanMap.</a>
+    </div>
+    <script src="./index.js"></script>
+</body>
+
+</html>

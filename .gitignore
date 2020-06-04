@@ -1,0 +1,5 @@
+.env
+*.sublime*
+free-us-map-notes.txt
+Makefile
+/bin
