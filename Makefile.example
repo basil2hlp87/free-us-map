@@ -1,0 +1,26 @@
+.PHONY: build push stop move start update_icon restart deploy
+
+build:
+	GOOS=linux GOARCH=amd64 go build -o bin/free-us-map-new main.go
+
+push:
+	scp bin/free-us-map-new user@host:/path/to/app/
+
+stop:
+	ssh user@host 'PROCESS_ID=`ps -aef | grep free-us-map | grep -v grep | sed -E "s/user\s+([0-9]+)\s+.*/\1/g"`; [[ -n "$$PROCESS_ID" ]] && kill -9 $$PROCESS_ID'
+
+move:
+	ssh user@host 'cd /path/to/app; mv free-us-map-new free-us-map'
+
+start:
+	ssh user@host 'cd /path/to/app; ./free-us-map  &>> out.log &'
+
+update_icon:
+	scp static/images/* user@host:/path/to/app/static/images/ && scp static/favicon.ico user@host:/path/to/app/static/
+
+update_frontend:
+	scp static/index* user@host:/path/to/app/static/
+
+restart: stop start
+
+deploy: update_frontend build push stop move start
