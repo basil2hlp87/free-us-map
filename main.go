@@ -77,7 +77,8 @@ func handleGetPoints(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 		from points
 		where created_at > now() - interval '12 hours' 
 		  and box(point($1, $2), point($3, $4)) @> coordinates
-		  and hidden = false;`
+		  and hidden = false
+		limit 500;`
 		rows, err := db.Query(qry, bnd.Ne.X(), bnd.Ne.Y(), bnd.Sw.X(), bnd.Sw.Y(), bnd.RequestedBy)
 		if err != nil {
 			log.Print(err)
