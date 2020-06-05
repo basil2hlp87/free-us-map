@@ -133,45 +133,54 @@ function createPoint(event) {
     // Present the popup box.
     var iconGrpId = `icon-grp_${lat}_${lng}`;
     var popup = L.popup({
-        maxWidth: 400
+        maxWidth: 300
     }).setLatLng([lat, lng]).setContent(`
         <form>
-            <div class="form-group" style="width: 300px">
+            <div class="form-group">
                 <textarea id="msg-body" class="form-control" id="message" rows="3"></textarea>
             </div>
-            <div id="${iconGrpId}" class="btn-group mr-2">
-                <button type="button" class="btn btn-light active">📍</button>
+            <div id="a-${iconGrpId}" class="btn-group mr-2">
+                <button type="button" class="btn btn-light">📍</button>
                 <button type="button" class="btn btn-light">🚔</button>
                 <button type="button" class="btn btn-light">☁️</button>
                 <button type="button" class="btn btn-light">🚧</button>
-                <input type="text" class="form-control" placeholder="..." style="width: 3rem;">
+                <button type="button" class="btn btn-light">🚰</button>
+            </div>
+            <div id="b-${iconGrpId}" class="btn-group mr-2">
+                <button type="button" class="btn btn-light">📦</button>
+                <button type="button" class="btn btn-light">🍕</button>
+                <button type="button" class="btn btn-light">⚕️</button>
+                <button type="button" class="btn btn-light">🚽</button>
+                <input type="text" class="form-control" placeholder="..." style="width: 3rem;" maxlength="1">
             </div>
             <button id="submit-btn" type="submit" class="btn btn-primary">Add</button>
         </form>
     `).openOn(map);
 
-    const iconGrp = document.getElementById(iconGrpId);
-    for (var i = 0; i < iconGrp.childElementCount; i++) {
-        const elem = iconGrp.children[i];
-        elem.addEventListener('click', (e) => {
-            var prevIcon = icon;
-            icon = elem.innerText || elem.value || prevIcon || "📍";
-            changeHighlightedIcon(iconGrp, i);
+    for (var row of ["a", "b"]){
+        const iconGrp = document.getElementById(`${row}-${iconGrpId}`);
+        for (var i = 0; i < iconGrp.childElementCount; i++) {
+            const elem = iconGrp.children[i];
+            elem.addEventListener('click', (e) => {
+                var prevIcon = icon;
+                icon = elem.innerText || elem.value || prevIcon || "📍";
+                changeHighlightedIcon(iconGrpId, i, row);
 
-            // Redraw the placeholder with the correct icon.
-            map.removeLayer(placeholderPoint);
-            placeholderPoint = L.marker([lat, lng], {icon: divIconFor(icon) }).addTo(map);
-        });
+                // Redraw the placeholder with the correct icon.
+                map.removeLayer(placeholderPoint);
+                placeholderPoint = L.marker([lat, lng], {icon: divIconFor(icon) }).addTo(map);
+            });
 
-        elem.addEventListener('keyup', (e) => {
-            var prevIcon = icon;
-            icon = elem.innerText || elem.value || prevIcon || "📍";
-            changeHighlightedIcon(iconGrp, i);
+            elem.addEventListener('keyup', (e) => {
+                var prevIcon = icon;
+                icon = elem.innerText || elem.value || prevIcon || "📍";
+                changeHighlightedIcon(iconGrpId, i, row);
 
-            // Redraw the placeholder with the correct icon.
-            map.removeLayer(placeholderPoint);
-            placeholderPoint = L.marker([lat, lng], {icon: divIconFor(icon) }).addTo(map);
-        });
+                // Redraw the placeholder with the correct icon.
+                map.removeLayer(placeholderPoint);
+                placeholderPoint = L.marker([lat, lng], {icon: divIconFor(icon) }).addTo(map);
+            });
+        }
     }
 
     // POST to the API when the submit button is pressed.
@@ -194,14 +203,17 @@ function createPoint(event) {
     });
 }
 
-function changeHighlightedIcon(group, idx) {
-    for (var i = 0; i < group.childElementCount; i++) {
-        const elem = group.children[i];
-        if (elem.type == "button") {
-            if (i === idx) {
-                elem.classList = "btn btn-light active"    
-            } else {
-                elem.classList = "btn btn-light"
+function changeHighlightedIcon(groupIdPrefix, idx, rowId) {
+    for (var row of ["a", "b"]){
+        const group = document.getElementById(`${row}-${groupIdPrefix}`);
+        for (var i = 0; i < group.childElementCount; i++) {
+            const elem = group.children[i];
+            if (elem.type == "button") {
+                if (i === idx && row === rowId) {
+                    elem.classList = "btn btn-light active"    
+                } else {
+                    elem.classList = "btn btn-light"
+                }
             }
         }
     }
