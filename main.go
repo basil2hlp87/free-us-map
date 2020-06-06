@@ -126,7 +126,9 @@ func toClickableLink(msg string) string {
 		return msg
 	}
 
-	if u.Host == "twitter.com" {
+	switch u.Host {
+	case "twitter.com":
+	case "mobile.twitter.com":
 		return fmt.Sprintf("<a href=\"%s\" target=\"_blank\">%s</a>", s, msg)
 	}
 

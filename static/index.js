@@ -71,7 +71,7 @@ function addNewPointsToMap(allPts) {
         pointsOnMap[ptId] = true;
 
         var createdAt = new Date(pt.properties.created_at)
-        var body = `<h5>${pt.properties.message}</h5><p>${createdAt.toLocaleTimeString('en-US', {timeZoneName: 'short' })} ${createdAt.toDateString()}</p>`;
+        var body = `<h6>${pt.properties.message}</h6><p>${createdAt.toLocaleTimeString('en-US', {timeZoneName: 'short' })} ${createdAt.toDateString()}</p>`;
 
         // Add buttons for deleting if you created the point.
         if (pt.can_delete) {
