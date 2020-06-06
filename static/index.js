@@ -2,14 +2,38 @@
 
 // Default zoom level.
 // (eventually) Zoom level above which no searches will be kicked off.
-const ZOOM_THRESHOLD = 11;
+const DEFAULT_ZOOM_THRESHOLD = 11;
+const DEFAULT_LON = -93.2624;
+const DEFAULT_LAT = 44.9343;
+
+// Initialize map //
+
+var startLat = DEFAULT_LAT;
+var startLon = DEFAULT_LON;
+var startZm = DEFAULT_ZOOM_THRESHOLD;
+
+// Use parameters from the URL to center the map if they are set.
+var fetchCurrentLocation = true;
+const queryString = window.location.search;
+if (queryString) {
+    const params = new URLSearchParams(queryString);
+
+    startLat = params.get("lat") || startLat;
+    startLon = params.get("lng") || startLon;
+    startZm = params.get("zm") || startZm;
+
+    fetchCurrentLocation = false;
+}
 
 // initialize Leaflet
-var map = L.map('map').setView({lon: -93.2624, lat: 44.9343}, ZOOM_THRESHOLD);
+var map = L.map('map').setView({lon: startLon, lat: startLat}, startZm);
 
-// Center the map on current location if available.
-map.locate({setView: true, maxZoom: ZOOM_THRESHOLD});
-map.on('locationfound', e => map.setView(e.latlng));
+// Center the map on current location if available and we haven't used the
+// params from the URL to set the current location.
+if (fetchCurrentLocation) {
+    map.locate({setView: true, maxZoom: startZm});
+    map.on('locationfound', e => map.setView(e.latlng));
+}
 
 // add the OpenStreetMap tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -20,9 +44,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // show the scale bar on the lower left corner
 L.control.scale().addTo(map);
 
-// Add event handler to trigger new search when the map moves.
-// TODO: (optimization) Don't search if the new area is within the previous area.
-map.on('moveend', e => getVisibilePoints());
+map.on('moveend', e => afterMoveZoomEnd());
+map.on('zoomend', e => afterMoveZoomEnd());
 
 // Trigger popup box for creating a point after clicking on the map.
 map.on('click', e => createPoint(e));
@@ -40,6 +63,25 @@ const UUID = uuidv4();
 getVisibilePoints();
 
 // Function declarations //
+
+function afterMoveZoomEnd() {
+    // When the map moves update the address bar with the new location so that
+    // the map position is retained across refreshes and can be shared.
+    updateAddressBarWithCurrentLocation();
+
+    // Add event handler to trigger new search when the map moves.
+    // TODO: (optimization) Don't search if the new area is within the
+    // previous area.
+    getVisibilePoints();
+}
+
+function updateAddressBarWithCurrentLocation() {
+    const center = map.getCenter();
+    const newQueryString = `lat=${center.lat}&lng=${center.lng}&zm=${map.getZoom()}`
+    const newUrl = `${window.location.protocol}//${window.location.host}?${newQueryString}`;
+
+    history.replaceState(null, null, newUrl);
+}
 
 function getVisibilePoints() {
     var httpRequest = new XMLHttpRequest();
