@@ -191,7 +191,7 @@ function createPoint(event) {
             <div id="b-${iconGrpId}" class="btn-group mr-2">
                 <button type="button" class="btn btn-light">📦</button>
                 <button type="button" class="btn btn-light">🍕</button>
-                <button type="button" class="btn btn-light">⚕️</button>
+                <button type="button" class="btn btn-light">🔋</button>
                 <button type="button" class="btn btn-light">🚽</button>
                 <input type="text" class="form-control" placeholder="..." style="width: 3rem;" maxlength="1">
             </div>
