@@ -174,6 +174,8 @@ type newPoint struct {
 
 func handlePostPoint(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		return
+
 		pt, err := newPointFromRequest(r)
 		if err != nil {
 			log.Print(err)
