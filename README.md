@@ -2,6 +2,8 @@
 
 A map displaying recent community-created events of interest.
 
+![image](static/images/free-us-map-live-info-sheet.png)
+
 ## Project Principles
 
 1. **First, do no harm.** This project may be used by vulnerable people. Do not make them more vulnerable by using this project. Do not collect data that is not essential to the use of the application. Take the time to add features in ways that they cannot be abused.
