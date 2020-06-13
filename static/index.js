@@ -55,14 +55,50 @@ document.getElementById("close-intro-msg").addEventListener('click', e => {
     document.getElementById("intro-msg").hidden = true;
 });
 
-// Generate UUID for "signing" requests from this session without requiring
-// cookies or any other identifying information.
-const UUID = uuidv4();
+// Check if the user if verified and reflect that in the icon in the top right.
+var isVerified = false;
+checkIfVerified();
+
+// Submit the verification request when we click the submit button.
+document.getElementById("verify-submit").addEventListener('click', submitVerificationRequest);
+
+// Show the verification info box if the verified icon is clicked.
+document.getElementById("login-indicator").addEventListener('click', e => {
+    const msgBox = document.getElementById("verify-msg")
+    msgBox.hidden = !msgBox.hidden;
+});
+
+// Dismiss the verification info box after the X icon is clicked.
+document.getElementById("close-verify-msg").addEventListener('click', e => {
+    document.getElementById("verify-msg").hidden = true;
+});
 
 // Load all points into the map.
 getVisibilePoints();
 
 // Function declarations //
+
+function submitVerificationRequest(e) {
+    var httpRequest = new XMLHttpRequest();
+
+    httpRequest.onreadystatechange = () => {
+        if (httpRequest.readyState === XMLHttpRequest.DONE) {
+            if (httpRequest.status === 200) {
+                document.getElementById("verify-text").innerHTML = "👍 Click on the link sent to your email address to start adding points!";
+            } else {
+                console.log("There was a problem with the request.");
+            }
+        }
+    };
+
+    var body = {
+        email: document.getElementById("verify-email").value,
+        current_url: location.toString(),
+    };
+
+    httpRequest.open('POST', '/api/v1/send_verification');
+    httpRequest.send(JSON.stringify(body));
+}
 
 function afterMoveZoomEnd() {
     // When the map moves update the address bar with the new location so that
@@ -83,6 +119,31 @@ function updateAddressBarWithCurrentLocation() {
     history.replaceState(null, null, newUrl);
 }
 
+function checkIfVerified() {
+    var httpRequest = new XMLHttpRequest();
+
+    httpRequest.onreadystatechange = () => {
+        if (httpRequest.readyState === XMLHttpRequest.DONE) {
+            if (httpRequest.status === 200) {
+                var resp = JSON.parse(httpRequest.responseText);
+                if (resp.verified) {
+                    setUserIsVerified();
+                }
+            } else {
+                console.log("There was a problem with the request.");
+            }
+        }
+    };
+
+    httpRequest.open('GET', '/api/v1/is_verified');
+    httpRequest.send();
+}
+
+function setUserIsVerified() {
+    isVerified = true;
+    document.getElementById("login-indicator").innerHTML = "✅";
+}
+
 function getVisibilePoints() {
     var httpRequest = new XMLHttpRequest();
 
@@ -98,7 +159,7 @@ function getVisibilePoints() {
     };
 
     var corners = map.getBounds();
-    var body = { NE: corners.getNorthEast(), SW: corners.getSouthWest(), requested_by: UUID };
+    var body = { NE: corners.getNorthEast(), SW: corners.getSouthWest() };
 
     httpRequest.open('POST', '/api/v1/points');
     httpRequest.send(JSON.stringify(body));
@@ -136,10 +197,16 @@ function addNewPointsToMap(allPts) {
                 deleteButton.addEventListener('click', (e) => deleteExistingPoint(ptId, newMarker));
             } else {
                 const upVoteButton = document.getElementById(`upvote-btn-${ptId}`);
-                upVoteButton.addEventListener('click', (e) => submitPointVote(ptId, "upvote"));
-
                 const downVoteButton = document.getElementById(`downvote-btn-${ptId}`);
-                downVoteButton.addEventListener('click', (e) => submitPointVote(ptId, "downvote"));
+
+                if (isVerified) {
+                    upVoteButton.addEventListener('click', (e) => submitPointVote(ptId, "upvote"));
+                    downVoteButton.addEventListener('click', (e) => submitPointVote(ptId, "downvote"));
+                } else {
+                    upVoteButton.disabled = true
+                    downVoteButton.disabled = true
+                    downVoteButton.insertAdjacentElement('afterend', verificationRequiredNote("rating points"));
+                }
             }
         });
     });
@@ -227,22 +294,38 @@ function createPoint(event) {
 
     // POST to the API when the submit button is pressed.
     var submitBtn = document.getElementById('submit-btn');
-    submitBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        submitBtn.disabled = true;
 
-        var msg = document.getElementById('msg-body').value;
-        postNewPoint(event.latlng, msg, icon)
+    if (isVerified) {
+        submitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            submitBtn.disabled = true;
 
-        // Close the popup and remove the temporary point we added.
-        map.removeLayer(popup);
-        map.removeLayer(placeholderPoint);
-    });
+            var msg = document.getElementById('msg-body').value;
+            postNewPoint(event.latlng, msg, icon)
+
+            // Close the popup and remove the temporary point we added.
+            map.removeLayer(popup);
+            map.removeLayer(placeholderPoint);
+        });
+    } else {
+        submitBtn.disabled = true
+        submitBtn.insertAdjacentElement('afterend', verificationRequiredNote("adding points"));
+    }
 
     // Remove temporary point we added if we close the box.
     popup._closeButton.addEventListener('click', (e) => {
         map.removeLayer(placeholderPoint);
     });
+}
+
+function verificationRequiredNote(action) {
+    const note = document.createElement('p');
+    note.innerHTML = `<a href="#">Verify your email before ${action}</a>`;
+    note.addEventListener('click', (e) => {
+        document.getElementById("verify-msg").hidden = false;
+    });
+
+    return note;
 }
 
 function changeHighlightedIcon(groupIdPrefix, idx, rowId) {
@@ -269,13 +352,18 @@ function postNewPoint(coords, msg, icon) {
             if (httpRequest.status === 200) {
                 var resp = JSON.parse(httpRequest.responseText);
                 addNewPointsToMap(resp);
+
+                // Set user is verified option here since the front-end may
+                // be out of sync with the back-end but if the back-end
+                // accepted the request then we know the user is verified.
+                setUserIsVerified();
             } else {
                 console.log("There was a problem with the request.");
             }
         }
     };
 
-    var body = { coords: coords, message: msg, icon: icon, created_by: UUID };
+    var body = { coords: coords, message: msg, icon: icon };
 
     httpRequest.open('POST', '/api/v1/point');
     httpRequest.send(JSON.stringify(body));
@@ -290,13 +378,18 @@ function deleteExistingPoint(id, marker) {
             if (httpRequest.status === 200) {
                 // Remove the point from the map on the front-end.
                 map.removeLayer(marker);
+
+                // Set user is verified option here since the front-end may
+                // be out of sync with the back-end but if the back-end
+                // accepted the request then we know the user is verified.
+                setUserIsVerified();
             } else {
                 console.log("There was a problem with the request.");
             }
         }
     };
 
-    var body = { point_id: Number(id), created_by: UUID };
+    var body = { point_id: Number(id) };
 
     httpRequest.open('POST', '/api/v1/delete');
     httpRequest.send(JSON.stringify(body));
@@ -308,21 +401,18 @@ function submitPointVote(id, endpoint) {
     httpRequest.onreadystatechange = () => {
         if (httpRequest.readyState === XMLHttpRequest.DONE) {
             if (httpRequest.status === 200) {
+                // Set user is verified option here since the front-end may
+                // be out of sync with the back-end but if the back-end
+                // accepted the request then we know the user is verified.
+                setUserIsVerified();
             } else {
                 console.log("There was a problem with the request.");
             }
         }
     };
 
-    var body = { point_id: Number(id), voter: UUID };
+    var body = { point_id: Number(id) };
 
     httpRequest.open('POST', `/api/v1/${endpoint}`);
     httpRequest.send(JSON.stringify(body));
-}
-
-// https://stackoverflow.com/a/2117523
-function uuidv4() {
-  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-  );
 }

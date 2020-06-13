@@ -19,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 
 	"./src/geo"
+	"./src/verify"
 )
 
 var envFile string
@@ -46,11 +47,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	http.HandleFunc("/api/v1/points", handleGetPoints(db))
+
 	http.HandleFunc("/api/v1/downvote", handlePointVote(db, -1))
 	http.HandleFunc("/api/v1/upvote", handlePointVote(db, 1))
 	http.HandleFunc("/api/v1/delete", handleDeletePoint(db))
 	http.HandleFunc("/api/v1/point", handlePostPoint(db))
-	http.HandleFunc("/api/v1/points", handleGetPoints(db))
+
+	http.HandleFunc("/api/v1/send_verification", verify.HandleSendVerification(db))
+	http.HandleFunc("/api/v1/is_verified", verify.HandleVerificationCheck(db))
+	http.HandleFunc("/verify", verify.HandleVerifyCode(db))
+
 	http.Handle("/", http.FileServer(http.Dir(rootDir)))
 
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(portNum), http.DefaultServeMux))
@@ -60,6 +67,11 @@ func main() {
 
 func handleGetPoints(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		requestedBy := "placeholder"
+		cookie, err := r.Cookie("free-us-map")
+		if err == nil && verify.CookieIsGood(db, cookie.Value) {
+			requestedBy = cookie.Value
+		}
 
 		bnd, err := boundsFromRequest(r)
 		if err != nil {
@@ -79,7 +91,7 @@ func handleGetPoints(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 		  and box(point($1, $2), point($3, $4)) @> coordinates
 		  and hidden = false
 		limit 500;`
-		rows, err := db.Query(qry, bnd.Ne.X(), bnd.Ne.Y(), bnd.Sw.X(), bnd.Sw.Y(), bnd.RequestedBy)
+		rows, err := db.Query(qry, bnd.Ne.X(), bnd.Ne.Y(), bnd.Sw.X(), bnd.Sw.Y(), requestedBy)
 		if err != nil {
 			log.Print(err)
 			return
@@ -166,15 +178,23 @@ func boundsFromRequest(r *http.Request) (bnd *bounds, err error) {
 // CREATE NEW POINT
 
 type newPoint struct {
-	Coords    coord  `json:"coords"`
-	CreatedBy string `json:"created_by"`
-	Message   string `json:"message"`
-	Icon      string `json:"icon"`
+	Coords  coord  `json:"coords"`
+	Message string `json:"message"`
+	Icon    string `json:"icon"`
 }
 
 func handlePostPoint(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		return
+		cookie, err := r.Cookie("free-us-map")
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		if !verify.CookieIsGood(db, cookie.Value) {
+			http.Error(w, "Invalid cookie", 403)
+			return
+		}
 
 		pt, err := newPointFromRequest(r)
 		if err != nil {
@@ -184,7 +204,7 @@ func handlePostPoint(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 
 		var id string
 		qry := "insert into points (coordinates, body, icon, created_at, created_by) values (point($1, $2), $3, $4, now(), $5) returning id"
-		err = db.QueryRow(qry, pt.Coords.X(), pt.Coords.Y(), pt.Message, pt.Icon, pt.CreatedBy).Scan(&id)
+		err = db.QueryRow(qry, pt.Coords.X(), pt.Coords.Y(), pt.Message, pt.Icon, cookie.Value).Scan(&id)
 		if err != nil {
 			log.Print(err)
 			return
@@ -221,12 +241,22 @@ func newPointFromRequest(r *http.Request) (pt *newPoint, err error) {
 // DELETE POINT
 
 type deleteOpts struct {
-	Id        int    `json:"point_id"`
-	CreatedBy string `json:"created_by"`
+	Id int `json:"point_id"`
 }
 
 func handleDeletePoint(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("free-us-map")
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		if !verify.CookieIsGood(db, cookie.Value) {
+			http.Error(w, "Invalid cookie", 403)
+			return
+		}
+
 		opts, err := newDeleteOptsFromRequest(r)
 		if err != nil {
 			log.Print(err)
@@ -234,7 +264,7 @@ func handleDeletePoint(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 		}
 
 		qry := "update points set hidden = true where id = $1 and created_by = $2"
-		_, err = db.Exec(qry, opts.Id, opts.CreatedBy)
+		_, err = db.Exec(qry, opts.Id, cookie.Value)
 		if err != nil {
 			log.Print(err)
 			return
@@ -260,12 +290,22 @@ func newDeleteOptsFromRequest(r *http.Request) (opts *deleteOpts, err error) {
 // UP/DOWNVOTE POINT
 
 type voteOpts struct {
-	PointId int    `json:"point_id"`
-	Voter   string `json:"voter"`
+	PointId int `json:"point_id"`
 }
 
 func handlePointVote(db *sql.DB, val int) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("free-us-map")
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		if !verify.CookieIsGood(db, cookie.Value) {
+			http.Error(w, "Invalid cookie", 403)
+			return
+		}
+
 		opts, err := newVoteOptsFromRequest(r)
 		if err != nil {
 			log.Print(err)
@@ -274,7 +314,7 @@ func handlePointVote(db *sql.DB, val int) func(http.ResponseWriter, *http.Reques
 
 		// Check if this person has already voted.
 		qry := "insert into votes (voter_id, point_id, value) values ($1, $2, $3)"
-		_, err = db.Exec(qry, opts.Voter, opts.PointId, val)
+		_, err = db.Exec(qry, cookie.Value, opts.PointId, val)
 		if err != nil {
 			// Assume we hit a duplicate key constraint and return early.
 			return

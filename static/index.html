@@ -47,12 +47,21 @@
             background: none;
             border: none;
         }
-        #temp-notice {
+        #verify-msg {
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
             margin: 0 10%;
             position: absolute;
                 top: 2%;
             width: 80%;
+            z-index: 10000;
+        }
+        #login-indicator {
+            cursor: pointer;
+            text-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            position: absolute;
+                top: 0;
+                right: 0;
             z-index: 10000;
         }
         #intro-msg {
@@ -63,7 +72,8 @@
             width: 80%;
             z-index: 10000;
         }
-        #close-intro-msg {
+        #close-intro-msg,
+        #close-verify-msg {
             margin: -0.5rem -0.5rem 0 1.5rem;
         }
     </style>
@@ -71,9 +81,14 @@
 
 <body>
     <div id="map"></div>
-    <div id="temp-notice" class="alert alert-warning">
-        9:45pm Eastern Monday 8 June: Read-only mode as we improve abuse prevention.
+    <div id="verify-msg" class="alert alert-warning" hidden>
+        <button id="close-verify-msg" type="button" class="close"><span>&times;</span></button>
+        <p id="verify-text">Verify your email address to add points and up/downvote.</p>
+        <input type="email" class="form-control" id="verify-email" placeholder="name@example.com">
+        <br /><button type="submit" class="btn btn-primary" id="verify-submit">Submit</button>
     </div>
+
+    <div id="login-indicator">✳️</div>
 
     <div id="intro-msg" class="alert alert-info">
         <button id="close-intro-msg" type="button" class="close"><span>&times;</span></button>
